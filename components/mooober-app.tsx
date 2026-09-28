@@ -679,7 +679,7 @@ export default function MoooberApp() {
 
   return (
     <main className="mooober-app">
-      <section className={`booking-sheet${tripActive ? ' booking-sheet--trip' : ''}`} aria-label="叫牛行程設定">
+      <section className={`booking-sheet${tripActive ? ' booking-sheet--trip' : ''}${pickMode ? ' booking-sheet--picking' : ''}`} aria-label="叫牛行程設定">
         <div className="sheet-handle" aria-hidden="true" />
         {tripActive ? (
           <TripPanel

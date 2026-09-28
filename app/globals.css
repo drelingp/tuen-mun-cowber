@@ -1220,6 +1220,61 @@ button {
   color: #111111;
 }
 
+@media (max-width: 1180px) {
+  .booking-sheet--picking {
+    display: none;
+  }
+
+  .booking-sheet--picking ~ .map-shell {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    border-radius: 0;
+  }
+
+  .booking-sheet--picking ~ .map-shell .leaflet-control-zoom {
+    margin-bottom: 16px !important;
+  }
+
+  .booking-sheet--picking ~ .map-shell .map-notice {
+    bottom: 17px;
+  }
+}
+
+@media (min-width: 841px) and (max-width: 1180px) {
+  .booking-sheet {
+    width: min(360px, calc(100vw - 32px));
+  }
+
+  .map-shell {
+    left: 392px;
+  }
+
+  .booking-content,
+  .trip-monitor {
+    padding: 20px 15px 24px;
+  }
+
+  .brand-row {
+    gap: 10px;
+    margin-bottom: 13px;
+  }
+
+  .brand-row h1 {
+    font-size: 1.58rem;
+  }
+
+  .fare-chip {
+    min-width: 88px;
+    padding: 10px 10px 9px;
+  }
+
+  .location-field {
+    padding: 11px 0;
+  }
+}
+
 @media (max-width: 840px) {
   html,
   body {
@@ -1299,6 +1354,38 @@ button {
 
   .booking-sheet--trip ~ .map-shell .map-notice {
     bottom: calc(54svh + 14px);
+  }
+}
+
+@media (min-width: 600px) and (max-width: 840px) {
+  .booking-sheet {
+    max-height: 56svh;
+  }
+
+  .booking-sheet--trip {
+    max-height: 47svh;
+  }
+
+  .booking-content,
+  .trip-monitor {
+    padding-right: 22px;
+    padding-left: 22px;
+  }
+
+  .leaflet-control-zoom {
+    margin-bottom: calc(56svh + 13px) !important;
+  }
+
+  .booking-sheet--trip ~ .map-shell .leaflet-control-zoom {
+    margin-bottom: calc(47svh + 13px) !important;
+  }
+
+  .map-notice {
+    bottom: calc(56svh + 14px);
+  }
+
+  .booking-sheet--trip ~ .map-shell .map-notice {
+    bottom: calc(47svh + 14px);
   }
 }
 

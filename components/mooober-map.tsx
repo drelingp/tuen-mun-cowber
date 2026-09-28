@@ -152,7 +152,6 @@ export function MoooberMap({
   dark,
   focusTarget,
   recenterToken,
-  pickMode,
   onMapClick,
   onTileSourceChange,
 }: MoooberMapProps) {
@@ -329,7 +328,7 @@ export function MoooberMap({
   useEffect(() => {
     if (!mapRef.current) return
     mapRef.current.getContainer().classList.toggle('mooober-map--dark', dark)
-  }, [dark])
+  }, [dark, mapReady])
 
   useEffect(() => {
     if (!mapReady || !mapRef.current || !focusTarget) return
@@ -449,7 +448,7 @@ export function MoooberMap({
   return (
     <div
       ref={mapNode}
-      className={`mooober-map${dark ? ' mooober-map--dark' : ''}${pickMode ? ' mooober-map--picking' : ''}`}
+      className="mooober-map"
       aria-label="屯門、元朗及天水圍互動地圖"
       role="application"
     />
