@@ -98,6 +98,20 @@ const TRIP_EVENTS = [
   '行程進行順利，預計可準時抵達。',
 ]
 
+const AUTO_RIDER_NAMES = ['阿明', '小欣', '陳小明', '王家豪', '李嘉欣']
+
+function createAutoRiderProfile() {
+  const name = AUTO_RIDER_NAMES[Math.floor(Math.random() * AUTO_RIDER_NAMES.length)]
+  const firstDigit = ['5', '6', '9'][Math.floor(Math.random() * 3)]
+  const remainingDigits = Math.floor(Math.random() * 10_000_000).toString().padStart(7, '0')
+  const digits = `${firstDigit}${remainingDigits}`
+
+  return {
+    name,
+    phone: `${digits.slice(0, 4)} ${digits.slice(4)}`,
+  }
+}
+
 function haversineKm(a: MapPoint, b: MapPoint) {
   const radians = (value: number) => value * Math.PI / 180
   const radius = 6371
@@ -447,6 +461,12 @@ export default function MoooberApp() {
   const bookingReady = Boolean(routeReady && riderName.trim() && validPhone(riderPhone) && !routeLoading)
 
   useEffect(() => {
+    const profile = createAutoRiderProfile()
+    setRiderName(profile.name)
+    setRiderPhone(profile.phone)
+  }, [])
+
+  useEffect(() => {
     return () => {
       if (tripTimerRef.current) window.clearInterval(tripTimerRef.current)
     }
@@ -776,11 +796,11 @@ export default function MoooberApp() {
             <div className="rider-fields">
               <label>
                 <span><UserRound aria-hidden="true" />騎士姓名</span>
-                <input value={riderName} onChange={(event) => setRiderName(event.target.value)} placeholder="例如：阿明" />
+                <input value={riderName} onChange={(event) => setRiderName(event.target.value)} placeholder="例如：阿明" autoComplete="name" />
               </label>
               <label>
                 <span><Phone aria-hidden="true" />聯絡電話</span>
-                <input value={riderPhone} onChange={(event) => setRiderPhone(event.target.value)} placeholder="例如：9123 4567" inputMode="numeric" />
+                <input value={riderPhone} onChange={(event) => setRiderPhone(event.target.value)} placeholder="例如：9123 4567" inputMode="numeric" autoComplete="tel" />
               </label>
             </div>
 

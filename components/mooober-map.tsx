@@ -117,13 +117,30 @@ function createPinIcon(kind: 'start' | 'end' | 'driver') {
   })
 }
 
-function createAmbientIcon(index: number) {
+function createAmbientIcon() {
   return leaflet!.divIcon({
     className: '',
-    html: `<div class="mooober-ambient-cow" style="--cow-delay:${index * 0.22}s"><span class="mooober-cow-emoji mooober-cow-emoji--ambient" aria-hidden="true">🐄</span></div>`,
+    html: '<div class="mooober-ambient-cow"><span class="mooober-cow-emoji mooober-cow-emoji--ambient" aria-hidden="true">🐄</span></div>',
     iconSize: [28, 28],
     iconAnchor: [14, 14],
   })
+}
+
+function pointAlongTrack(track: Array<[number, number]>, progress: number): [number, number] {
+  if (track.length === 0) return CENTER
+  if (track.length === 1) return track[0]
+
+  const clampedProgress = Math.max(0, Math.min(1, progress))
+  const position = clampedProgress * (track.length - 1)
+  const segmentIndex = Math.min(track.length - 2, Math.floor(position))
+  const segmentProgress = position - segmentIndex
+  const [fromLat, fromLng] = track[segmentIndex]
+  const [toLat, toLng] = track[segmentIndex + 1]
+
+  return [
+    fromLat + (toLat - fromLat) * segmentProgress,
+    fromLng + (toLng - fromLng) * segmentProgress,
+  ]
 }
 
 export function MoooberMap({
@@ -161,6 +178,8 @@ export function MoooberMap({
     if (!mapNode.current || mapRef.current) return
 
     let disposed = false
+    let resizeObserver: ResizeObserver | null = null
+    let invalidateTimer: number | null = null
 
     const initializeMap = async () => {
       const module = await import('leaflet')
@@ -174,6 +193,8 @@ export function MoooberMap({
         minZoom: 10,
         maxZoom: 19,
         zoomSnap: 0.5,
+        zoomAnimation: true,
+        fadeAnimation: false,
       }).setView(CENTER, 12)
 
       mapRef.current = map
@@ -188,19 +209,30 @@ export function MoooberMap({
 
         tileErrorCountRef.current = 0
         tileSourceIndexRef.current = sourceIndex
+        let sourceHasLoaded = false
         const tileLayer = api.tileLayer(source.url, {
           attribution: source.attribution,
           subdomains: source.subdomains,
           maxZoom: 19,
           maxNativeZoom: 19,
           crossOrigin: true,
-          updateWhenZooming: false,
-          keepBuffer: 3,
+          updateWhenZooming: true,
+          updateWhenIdle: false,
+          updateInterval: 100,
+          keepBuffer: 4,
+          noWrap: true,
+        })
+
+        tileLayer.on('tileload', () => {
+          if (tileLayerRef.current !== tileLayer) return
+          sourceHasLoaded = true
+          tileErrorCountRef.current = 0
         })
 
         tileLayer.on('tileerror', () => {
+          if (tileLayerRef.current !== tileLayer || sourceHasLoaded) return
           tileErrorCountRef.current += 1
-          if (tileErrorCountRef.current >= 3 && sourceIndex < TILE_SOURCES.length - 1) {
+          if (tileErrorCountRef.current >= 6 && sourceIndex < TILE_SOURCES.length - 1) {
             installTileSource(sourceIndex + 1)
           }
         })
@@ -217,14 +249,32 @@ export function MoooberMap({
         mapClickRef.current({ lat: event.latlng.lat, lng: event.latlng.lng })
       })
 
+      const refreshMapSize = () => {
+        window.requestAnimationFrame(() => {
+          if (!disposed && mapRef.current === map) {
+            map.invalidateSize({ pan: false, debounceMoveend: true })
+          }
+        })
+      }
+
+      map.on('zoomend', refreshMapSize)
+      map.on('resize', refreshMapSize)
+
+      if (typeof ResizeObserver !== 'undefined' && mapNode.current) {
+        resizeObserver = new ResizeObserver(refreshMapSize)
+        resizeObserver.observe(mapNode.current)
+      }
+
       setMapReady(true)
-      window.setTimeout(() => map.invalidateSize(), 80)
+      invalidateTimer = window.setTimeout(refreshMapSize, 80)
     }
 
     void initializeMap()
 
     return () => {
       disposed = true
+      if (invalidateTimer) window.clearTimeout(invalidateTimer)
+      resizeObserver?.disconnect()
       ambientMarkersRef.current.forEach((marker) => marker.remove())
       ambientMarkersRef.current = []
       mapRef.current?.remove()
@@ -234,27 +284,43 @@ export function MoooberMap({
   }, [])
 
   useEffect(() => {
-    if (!mapReady || !mapRef.current) return
+    if (!mapReady || !mapRef.current || !leaflet) return
 
     const map = mapRef.current
-    const timer = window.setInterval(() => {
-      ambientMarkersRef.current.forEach((marker, index) => {
-        const track = AMBIENT_TRACKS[index % AMBIENT_TRACKS.length]
-        const nextPoint = track[(Date.now() / 1700 + index * 1.7) % track.length | 0]
-        marker.setLatLng(nextPoint)
-      })
-    }, 1700)
+    const motions = AMBIENT_TRACKS.map((track) => ({
+      track,
+      duration: 18_000 + Math.random() * 12_000,
+      phase: Math.random() * 2,
+      reverse: Math.random() > 0.5,
+    }))
+    const startedAt = performance.now()
+    let animationFrame = 0
 
-    ambientMarkersRef.current = AMBIENT_TRACKS.map((track, index) =>
-      leaflet!.marker(track[index % track.length], {
+    const positionForMotion = (motion: (typeof motions)[number], timestamp: number) => {
+      const oneWayProgress = ((timestamp - startedAt) / motion.duration + motion.phase) % 2
+      const pingPongProgress = oneWayProgress <= 1 ? oneWayProgress : 2 - oneWayProgress
+      return pointAlongTrack(motion.track, motion.reverse ? 1 - pingPongProgress : pingPongProgress)
+    }
+
+    ambientMarkersRef.current = motions.map((motion, index) =>
+      leaflet!.marker(positionForMotion(motion, startedAt), {
         interactive: false,
-        icon: createAmbientIcon(index),
+        icon: createAmbientIcon(),
         opacity: index < 4 ? 0.9 : 0.58,
       }).addTo(map),
     )
 
+    const animate = (timestamp: number) => {
+      ambientMarkersRef.current.forEach((marker, index) => {
+        marker.setLatLng(positionForMotion(motions[index], timestamp))
+      })
+      animationFrame = window.requestAnimationFrame(animate)
+    }
+
+    animationFrame = window.requestAnimationFrame(animate)
+
     return () => {
-      window.clearInterval(timer)
+      window.cancelAnimationFrame(animationFrame)
       ambientMarkersRef.current.forEach((marker) => marker.remove())
       ambientMarkersRef.current = []
     }
