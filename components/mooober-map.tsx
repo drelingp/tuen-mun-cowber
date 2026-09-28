@@ -105,7 +105,7 @@ const AMBIENT_TRACKS: Array<Array<[number, number]>> = [
 function createPinIcon(kind: 'start' | 'end' | 'driver') {
   const className = kind === 'start' ? 'mooober-pin mooober-pin--start' : kind === 'end' ? 'mooober-pin mooober-pin--end' : 'mooober-driver-pin'
   const content = kind === 'driver'
-    ? '<img class="mooober-cow-image" src="/cow-driver.png" alt="" />'
+    ? '<span class="mooober-cow-emoji mooober-cow-emoji--driver" aria-hidden="true">🐄</span>'
     : '<i></i>'
   const size = kind === 'driver' ? 44 : 28
 
@@ -120,7 +120,7 @@ function createPinIcon(kind: 'start' | 'end' | 'driver') {
 function createAmbientIcon(index: number) {
   return leaflet!.divIcon({
     className: '',
-    html: `<div class="mooober-ambient-cow" style="--cow-delay:${index * 0.22}s"><img class="mooober-cow-image" src="/cow-driver.png" alt="" /></div>`,
+    html: `<div class="mooober-ambient-cow" style="--cow-delay:${index * 0.22}s"><span class="mooober-cow-emoji mooober-cow-emoji--ambient" aria-hidden="true">🐄</span></div>`,
     iconSize: [28, 28],
     iconAnchor: [14, 14],
   })
